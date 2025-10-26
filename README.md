@@ -34,3 +34,7 @@ This workflow automates the process of summarizing educational YouTube videos us
 2. Import the workflow into your n8n instance.
 3. Set up your credentials for YouTube, OpenRouter, and Google Sheets.
 4. Click **Execute Workflow** to run the workflow and populate your Google Sheet.
+
+---
+
+> **Important:** Credentials and Google Sheets links in this workflow have been removed for security. Make sure to configure your own credentials before running the workflow.

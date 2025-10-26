@@ -238,14 +238,14 @@
           "value": "16YBKriq5IL850kiRmxDdfO96h0aejxbZ3a1ifdu8sv0",
           "mode": "list",
           "cachedResultName": "резюме",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16YBKriq5IL850kiRmxDdfO96h0aejxbZ3a1ifdu8sv0/edit?usp=drivesdk"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/<GDRIVE_ID>/edit?usp=drivesdk"
         },
         "sheetName": {
           "__rl": true,
           "value": 159353817,
           "mode": "list",
           "cachedResultName": "ютуб",
-          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16YBKriq5IL850kiRmxDdfO96h0aejxbZ3a1ifdu8sv0/edit#gid=159353817"
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/<GDRIVE_ID>/edit#gid=159353817"
         },
         "columns": {
           "mappingMode": "defineBelow",

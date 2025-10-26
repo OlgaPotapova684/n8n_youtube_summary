@@ -1,0 +1,448 @@
+{
+  "name": "-YOUTUBE summary",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "53991c82-55d9-4e31-addd-6d9536268d35",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "limit": 5,
+        "filters": {
+          "publishedAfter": "2025-10-09T00:00:00",
+          "q": "n8n tutorials",
+          "videoType": "any"
+        },
+        "options": {
+          "order": "relevance",
+          "safeSearch": "moderate"
+        }
+      },
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "ebd5c9c4-c35f-48d4-a992-740ab90a9f6f",
+      "name": "Get many videos",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "<YOUR_CREDENTIALS>",
+          "name": "YouTube account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// n8n Code node (JavaScript)\n// Получает данные от YouTube-ноды, где в item.json лежат видео с полями contentDetails и statistics\n\nconst results = [];\n\nfor (const item of items) {\n  const video = item.json;\n\n  // Название\n  const title = video.snippet?.title || \"Без названия\";\n\n  // Длительность (ISO 8601)\n  const durationISO = video.contentDetails?.duration || \"PT0S\";\n\n  // Просмотры\n  const views = video.statistics?.viewCount\n    ? Number(video.statistics.viewCount)\n    : 0;\n\n  // Преобразуем длительность в секунды\n  function parseISODuration(iso) {\n    const match = iso.match(/PT(?:(\\d+)H)?(?:(\\d+)M)?(?:(\\d+)S)?/);\n    const hours = parseInt(match?.[1] || 0);\n    const minutes = parseInt(match?.[2] || 0);\n    const seconds = parseInt(match?.[3] || 0);\n    return hours * 3600 + minutes * 60 + seconds;\n  }\n\n  const totalSeconds = parseISODuration(durationISO);\n\n  // Форматируем длительность \"H:MM:SS\" или \"M:SS\"\n  const hours = Math.floor(totalSeconds / 3600);\n  const minutes = Math.floor((totalSeconds % 3600) / 60);\n  const seconds = totalSeconds % 60;\n\n  const durationFormatted =\n    hours > 0\n      ? `${hours}:${minutes.toString().padStart(2, \"0\")}:${seconds\n          .toString()\n          .padStart(2, \"0\")}`\n      : `${minutes}:${seconds.toString().padStart(2, \"0\")}`;\n\n  results.push({\n    title,\n    views,\n    duration_seconds: totalSeconds,\n    duration_formatted: durationFormatted,\n  });\n}\n\nreturn results.map(r => ({ json: r }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "39ce40b7-77e4-4502-ad3d-85f65dccac3a",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "get",
+        "videoId": "={{ $json.id.videoId }}",
+        "part": [
+          "*",
+          "statistics",
+          "snippet",
+          "contentDetails"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "620cad13-3cb9-4f21-831c-3a39eb2ec33b",
+      "name": "Get a video",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "<YOUR_CREDENTIALS>",
+          "name": "YouTube account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "64d802b1-9ab0-4b75-85e5-bacf4e46cdf9",
+              "leftValue": "={{ $json.views }}",
+              "rightValue": 1000,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            },
+            {
+              "id": "5beb38a5-6073-4822-bcad-09d506e4cb24",
+              "leftValue": "={{ $json.duration_seconds }}",
+              "rightValue": 300,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        832,
+        0
+      ],
+      "id": "9017646e-0dba-405e-a707-c4f609762672",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "options": {
+          "reset": false
+        }
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1040,
+        -96
+      ],
+      "id": "0e706006-23c1-4c56-a0e4-d4968ccdb573",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.title }}{{ $json.views }}{{ $json.duration_formatted }}",
+        "options": {
+          "systemMessage": "=Ты — эксперт по онлайн-обучению и анализу образовательных видео на YouTube. \nОпредели, чему можно научиться, посмотрев видео, исходя из его названия, длительности и количества просмотров.\nБудь краток, конкретен и фокусируйся на практической пользе для зрителя. Ответь на русском языке.\n\nВыдай JSON:\n{\n  \"title\": \"...\",\n  \"topic\": \"...\",\n  \"skills\": [\"...\"],\n  \"short_summary\": \"...\"\n}\n\nГде:\n- title — название видео,\n- topic — чему оно обучает,\n- skills — какие конкретные навыки можно получить,\n- short_summary — краткое описание сути видео.\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        0
+      ],
+      "id": "16c623f0-aa08-4c0e-8e3f-13758a41059e",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": "google/gemma-3n-e2b-it:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1120,
+        208
+      ],
+      "id": "a8e2e430-10fb-4abd-a42e-78a641887df2",
+      "name": "OpenRouter Chat Model",
+      "credentials": {
+        "openRouterApi": {
+          "id": "<YOUR_CREDENTIALS>",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.output }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "title",
+              "description": "title"
+            },
+            {
+              "name": "\"topic",
+              "description": "\"topic"
+            },
+            {
+              "name": "skills",
+              "description": "skills"
+            },
+            {
+              "name": "link",
+              "description": "link"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        1600,
+        0
+      ],
+      "id": "f15e73ea-6494-422b-837c-dada7bbb0da4",
+      "name": "Information Extractor"
+    },
+    {
+      "parameters": {
+        "model": "google/gemma-3n-e2b-it:free",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        208
+      ],
+      "id": "c01f5e86-20d9-4d58-8321-f9e0799e2946",
+      "name": "OpenRouter Chat Model1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "<YOUR_CREDENTIALS>",
+          "name": "OpenRouter account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "16YBKriq5IL850kiRmxDdfO96h0aejxbZ3a1ifdu8sv0",
+          "mode": "list",
+          "cachedResultName": "резюме",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16YBKriq5IL850kiRmxDdfO96h0aejxbZ3a1ifdu8sv0/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 159353817,
+          "mode": "list",
+          "cachedResultName": "ютуб",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/16YBKriq5IL850kiRmxDdfO96h0aejxbZ3a1ifdu8sv0/edit#gid=159353817"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "title": "={{ $json.output.title }}",
+            "\"topic": "={{ $json.output['\"topic'] }}",
+            "skills": "={{ $json.output.skills }}",
+            "link": "={{ $('Get a video').item.json.snippet.thumbnails.default.url }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "\"topic",
+              "displayName": "\"topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "skills",
+              "displayName": "skills",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "link",
+              "displayName": "link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1952,
+        0
+      ],
+      "id": "f871d42a-8fb7-4908-8e97-60192fe7ea74",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "<YOUR_CREDENTIALS>",
+          "name": "Google Sheets account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get many videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many videos": {
+      "main": [
+        [
+          {
+            "node": "Get a video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a video": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Information Extractor": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9bf8c1f5-8737-45f8-9ca8-69886ce5070a",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ea579bb4322be5ed165038edfe7e4fb3eba44d13d8d0cb3a81f689d6167a6a13"
+  },
+  "id": "nME9xfGx4Pkfobi1",
+  "tags": []
+}
